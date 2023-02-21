@@ -146,7 +146,11 @@ describe('[Challenge] Puppet v3', function () {
         // Lending pool has 1,000,000 DVT
 
         // Deploy malicious contract
-        const playerContract = await (await ethers.getContractFactory("PlayerContract")).deploy(uniswapPool.address, token.address);
+        const playerContract = await (await ethers.getContractFactory("PlayerContract")).deploy(
+            uniswapPool.address, 
+            token.address, 
+            weth.address
+        );
 
         // Send all DVT tokens to the contract
         const sendTokens = await token.connect(player).transfer(playerContract.address, PLAYER_INITIAL_TOKEN_BALANCE);
@@ -167,7 +171,13 @@ describe('[Challenge] Puppet v3', function () {
         console.log("Uniswap DVT: ", Number(poolBalanceDVT) / 10 ** 18);
         console.log("Uniswap ETH: ", Number(poolBalanceETH) / 10 ** 18);
 
+        await time.increase(5)
+
+        const arithmeticTick = await playerContract.getArithmeticTick();
+        const quotePrice = await playerContract.getQuote();
         const newPrice = await lendingPool.calculateDepositOfWETHRequired(LENDING_POOL_INITIAL_TOKEN_BALANCE)
+        console.log("Mean Tick: ", arithmeticTick);
+        console.log("Quote Price: ", quotePrice);
         console.log("New Price: ", Number(newPrice) / 10 ** 18);
 
     });

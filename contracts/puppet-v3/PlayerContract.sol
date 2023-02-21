@@ -12,11 +12,12 @@ contract PlayerContract is IUniswapV3SwapCallback {
 
     address uniswapV3Pool;
     IERC20Minimal public immutable token;
-    uint160 sqrtPriceX96;
+    address public weth;
 
-    constructor(address _uniswapV3Pool, address _token) {
+    constructor(address _uniswapV3Pool, address _token, address _weth) {
         uniswapV3Pool = _uniswapV3Pool;
         token = IERC20Minimal(_token);
+        weth = _weth;
     }
 
     function getArithmeticTick() public view returns (int24) {
@@ -27,11 +28,20 @@ contract PlayerContract is IUniswapV3SwapCallback {
         return arithmeticMeanTick;
     }
 
+    function getQuote() public returns (uint256) {
+        uint256 quoteAmount = OracleLibrary.getQuoteAtTick(
+            getArithmeticTick(),
+            1000000 ether, // baseAmount
+            address(token), // baseToken
+            address(weth) // quoteToken
+        );
+        return quoteAmount;
+    }
+
     function getSlot0() public returns (uint160) {
         (uint160 _sqrtPriceX96, , , , , , ) = IUniswapV3Pool(uniswapV3Pool)
             .slot0();
-        sqrtPriceX96 = _sqrtPriceX96;
-        return sqrtPriceX96;
+        return _sqrtPriceX96;
     }
 
     function executeSwap() public returns (int256, int256) {
