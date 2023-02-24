@@ -1,5 +1,6 @@
 const { ethers } = require('hardhat');
 const { expect } = require('chai');
+const { time } = require("@nomicfoundation/hardhat-network-helpers");
 
 describe('[Challenge] ABI smuggling', function () {
     let deployer, player, recovery;
@@ -45,6 +46,20 @@ describe('[Challenge] ABI smuggling', function () {
 
     it('Execution', async function () {
         /** CODE YOUR SOLUTION HERE */
+
+        // Try to fast forward 15 days and just call the withdraw function
+        // Print out the calldata to understand how it works
+
+        const fastForward = await time.increase(15 * 24 * 60 * 60); // 15 days in seconds
+        const calldata = await vault.interface.encodeFunctionData(
+            'withdraw', [
+                token.address,
+                player.address,
+                1n ** 18n
+            ]
+        )
+        const withdraw = await vault.connect(player).execute(vault.address, calldata)
+        console.log("Withdraw Txn: ", withdraw);
     });
 
     after(async function () {
